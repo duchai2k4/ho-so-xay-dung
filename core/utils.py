@@ -1,31 +1,23 @@
-"""Tien ich dung chung: thong bao, email SMTP, launcher camera."""
+"""Tien ich dung chung: thong bao, email Brevo, launcher camera."""
 import os
 import sys
 import subprocess
-import smtplib
 import json
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from html import escape
-from email.message import EmailMessage
 from urllib.parse import urlsplit
 
 import flet as ft
+import requests
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # ------------------------------------------------------------------
-# Cau hinh SMTP. Thong tin dang nhap duoc doc tu bien moi truong.
+# Cau hinh Brevo. Thong tin truy cap duoc doc tu bien moi truong.
 # ------------------------------------------------------------------
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
+BREVO_EMAIL_API_URL = "https://api.brevo.com/v3/smtp/email"
 MAIL_API_CONFIG_PATH = os.path.join(PROJECT_ROOT, "app_config.json")
-
-
-def _smtp_credentials() -> tuple[str, str]:
-    sender_email = os.getenv("SMTP_SENDER_EMAIL", "").strip()
-    app_password = os.getenv("SMTP_APP_PASSWORD", "").strip()
-    return sender_email, app_password
 
 
 def _mail_api_url() -> str:
@@ -49,8 +41,8 @@ def _send_via_mail_api(path: str, payload: dict) -> tuple[bool, str]:
     api_url = _mail_api_url()
     if not api_url:
         return False, (
-            "Thiết bị này chưa có SMTP. Cần triển khai mail backend, "
-            "đặt MAIL_API_URL trong app_config.json rồi build lại APK."
+            "Thiết bị này chưa được cấu hình MAIL_API_URL. Cần triển khai mail "
+            "backend, đặt URL trong app_config.json rồi build lại APK."
         )
     parsed_url = urlsplit(api_url)
     if (
@@ -97,8 +89,7 @@ def show_message(page: ft.Page, msg_text, color=ft.Colors.GREEN_700):
 
 
 def smtp_is_configured() -> bool:
-    sender_email, app_password = _smtp_credentials()
-    return bool(sender_email and app_password)
+    return bool(os.getenv("BREVO_API_KEY", "").strip())
 
 
 def _send_mail(
@@ -107,37 +98,58 @@ def _send_mail(
     body: str,
     html_body: str | None = None,
 ) -> tuple[bool, str]:
-    sender_email, app_password = _smtp_credentials()
-    if not sender_email or not app_password:
-        return False, (
-            "Chưa cấu hình SMTP_SENDER_EMAIL và SMTP_APP_PASSWORD trong biến môi trường."
-        )
+    api_key = os.getenv("BREVO_API_KEY", "").strip()
+    if not api_key:
+        return False, "Chưa cấu hình BREVO_API_KEY trong biến môi trường."
+
+    sender_email = os.getenv("BREVO_SENDER_EMAIL", "").strip()
+    if not sender_email:
+        return False, "Chưa cấu hình BREVO_SENDER_EMAIL trong biến môi trường."
+
+    sender = {"email": sender_email}
+    sender_name = os.getenv("BREVO_SENDER_NAME", "").strip()
+    if sender_name:
+        sender["name"] = sender_name
+
+    email_payload = {
+        "sender": sender,
+        "to": [{"email": recipient_email}],
+        "subject": subject,
+        "textContent": body,
+    }
+    if html_body:
+        email_payload["htmlContent"] = html_body
 
     try:
-        message = EmailMessage()
-        message["Subject"] = subject
-        message["From"] = sender_email
-        message["To"] = recipient_email
-        message.set_content(body)
-        if html_body:
-            message.add_alternative(html_body, subtype="html")
-
-        smtp_server = os.getenv("SMTP_SERVER", SMTP_SERVER).strip() or SMTP_SERVER
-        smtp_port = int(os.getenv("SMTP_PORT", str(SMTP_PORT)))
-        with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as smtp:
-            smtp.ehlo()
-            smtp.starttls()
-            smtp.ehlo()
-            smtp.login(sender_email, app_password)
-            smtp.send_message(message)
+        response = requests.post(
+            BREVO_EMAIL_API_URL,
+            headers={
+                "accept": "application/json",
+                "api-key": api_key,
+                "content-type": "application/json",
+            },
+            json=email_payload,
+            timeout=15,
+        )
+        response.raise_for_status()
         return True, ""
-    except (OSError, smtplib.SMTPException, ValueError) as exc:
-        return False, str(exc)
+    except requests.RequestException as exc:
+        response = exc.response
+        if response is not None:
+            try:
+                error_payload = response.json()
+            except ValueError:
+                error_payload = None
+            if isinstance(error_payload, dict):
+                detail = error_payload.get("message")
+                if isinstance(detail, str) and detail:
+                    return False, f"Brevo API trả về HTTP {response.status_code}: {detail}"
+            return False, f"Brevo API trả về HTTP {response.status_code}: {response.text}"
+        return False, f"Không thể kết nối Brevo API: {exc}"
 
 
 def send_otp_email(recipient_email, otp_code):
-    sender_email, app_password = _smtp_credentials()
-    if not sender_email or not app_password:
+    if not smtp_is_configured():
         return _send_via_mail_api(
             "/v1/email/otp",
             {"recipient": recipient_email, "otp": otp_code},
@@ -220,8 +232,7 @@ def send_project_invitation_email(
     inviter_name: str,
     role: str,
 ):
-    sender_email, app_password = _smtp_credentials()
-    if not sender_email or not app_password:
+    if not smtp_is_configured():
         return _send_via_mail_api(
             "/v1/email/invitation",
             {

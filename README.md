@@ -74,35 +74,34 @@ Neu muon cai dat thu cong, co the dung:
     .\.venv\Scripts\activate
     python -m pip install -r requirements.txt
 
-### Cau hinh email SMTP Gmail
+### Cau hinh email Brevo
 
-Ung dung dung Gmail SMTP de gui OTP, email khoi phuc mat khau va loi moi du an.
-Tao Google App Password (tai khoan Gmail phai bat xac minh 2 buoc); khong dung
-mat khau Gmail thong thuong.
+Ung dung dung Brevo Transactional Email API de gui OTP, email khoi phuc mat khau
+va loi moi du an. Tao API key trong tai khoan Brevo va xac minh dia chi email
+nguoi gui truoc khi su dung.
 
 Tren Windows, mo PowerShell va khai bao bien moi truong sau (thay cac gia tri
 mau bang thong tin cua ban):
 
-    setx SMTP_SENDER_EMAIL "you@gmail.com"
-    setx SMTP_APP_PASSWORD "your-16-character-app-password"
+    setx BREVO_API_KEY "your-brevo-api-key"
+    setx BREVO_SENDER_EMAIL "you@example.com"
 
 Dong va mo lai PowerShell/VS Code sau khi dung `setx`, sau do chay lai ung dung.
 De chi cau hinh tam thoi trong cua so PowerShell hien tai, co the dung:
 
-    $env:SMTP_SENDER_EMAIL = "you@gmail.com"
-    $env:SMTP_APP_PASSWORD = "your-16-character-app-password"
+    $env:BREVO_API_KEY = "your-brevo-api-key"
+    $env:BREVO_SENDER_EMAIL = "you@example.com"
 
-May chu va cong SMTP mac dinh la `smtp.gmail.com:587` (STARTTLS). Neu can, co
-the ghi de bang `SMTP_SERVER` va `SMTP_PORT`. Khong commit App Password vao ma
-nguon, README, hoac repository.
+Co the khai bao them `BREVO_SENDER_NAME` de hien thi ten nguoi gui. Khong commit
+API key vao ma nguon, README, hoac repository.
 
 **Cac bien moi truong tren may build khong duoc dua vao APK.** Vi vay, khong
 nhung Gmail App Password vao ung dung Android. De gui OTP va loi moi tu dien
 thoai, can trien khai dich vu mail backend tai `backend/mail_api.py` tren may
 chu do ban quan ly:
 
-1. Dat `SMTP_SENDER_EMAIL` va `SMTP_APP_PASSWORD` trong environment/secrets cua
-   may chu, khong dat trong APK.
+1. Dat `BREVO_API_KEY` va `BREVO_SENDER_EMAIL` trong environment/secrets cua
+   may chu, khong dat trong APK. Dia chi gui phai duoc xac minh trong Brevo.
 2. Cau hinh HTTPS va gioi han request/anti-abuse o reverse proxy hoac nen tang
    host truoc khi mo API ra Internet. API co gioi han co ban theo IP, email va
    toan cuc tren moi tien trinh; gioi han nay khong thay the bao ve tai proxy

@@ -122,7 +122,7 @@ def _send_invitation(payload):
             raise ValueError(f"{field} không hợp lệ.")
 
     subject, body, html_body = _project_invitation_content(
-        recipient, project_id, project_name.strip(), inviter_name.strip(), role.strip()
+        project_id, project_name.strip(), inviter_name.strip(), role.strip()
     )
     return _send_mail(recipient, subject, body, html_body)
 
@@ -141,7 +141,7 @@ def application(environ, start_response):
         return _json_response(
             start_response,
             "503 Service Unavailable",
-            {"error": "Dịch vụ gửi email chưa được cấu hình SMTP."},
+            {"error": "Dịch vụ gửi email chưa được cấu hình BREVO_API_KEY."},
         )
 
     try:
@@ -177,7 +177,7 @@ def application(environ, start_response):
 def main():
     if not smtp_is_configured():
         raise RuntimeError(
-            "Hãy cấu hình SMTP_SENDER_EMAIL và SMTP_APP_PASSWORD trên máy chủ mail."
+            "Hãy cấu hình BREVO_API_KEY và BREVO_SENDER_EMAIL trên máy chủ mail."
         )
     with make_server("0.0.0.0", 8080, application) as server:
         logging.info("Mail API đang lắng nghe cổng 8080.")
