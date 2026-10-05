@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+env/
+venv/
+
+# Du lieu sinh ra khi chay
+du_lieu_thi_cong.db
+du_lieu_thi_cong.db.sync
+du_lieu_thi_cong.db.pre-neon-sync.bak
+camera_images/
+project_logs/
+camera_last_photo.txt
+*.pdf
+
+.DS_Store
+.vscode/
+.idea/
+build/
+build/

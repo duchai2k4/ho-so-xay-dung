@@ -1,0 +1,8 @@
+flet==1.0.3
+flet-camera==1.0.3
+flet-permission-handler==1.0.3
+flet-geolocator==1.0.3
+pillow>=10.0
+openpyxl>=3.1
+reportlab>=4.0
+pg8000>=1.31.2

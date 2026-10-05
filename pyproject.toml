@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ho-so-xay-dung"
+version = "1.0.0"
+description = "Ung dung ho so va quan ly du an xay dung"
+requires-python = ">=3.10"
+dependencies = [
+    "flet==1.0.3",
+    "flet-camera==1.0.3",
+    "flet-permission-handler==1.0.3",
+    "flet-geolocator==1.0.3",
+    "pillow>=10.0",
+    "openpyxl>=3.1",
+    "reportlab>=4.0",
+    "pg8000>=1.31.2",
+]
+
+[project.optional-dependencies]
+desktop-camera = [
+    "geocoder>=1.38",
+    "numpy>=1.24",
+    "opencv-python>=4.8",
+]
+
+# ------------------------------------------------------------------
+# KHAI BÁO RÕ RÀNG PACKAGE & MODULE (fix lỗi "Multiple top-level packages")
+# ------------------------------------------------------------------
+[tool.setuptools]
+packages = ["backend", "core", "ui"]
+py-modules = ["camera_app"]
+
+[tool.flet]
+org = "com.hosoxaydung"
+product = "Ho So Xay Dung"
+company = "Ho So Xay Dung"
+permissions = ["camera", "location"]
+
+[tool.flet.android.gradle_properties]
+"org.gradle.jvmargs" = "-Xmx2G -XX:MaxMetaspaceSize=1G -XX:ReservedCodeCacheSize=256m -XX:+HeapDumpOnOutOfMemoryError"
+"org.gradle.workers.max" = "2"
