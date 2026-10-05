@@ -49,16 +49,22 @@ def _redirect_response(start_response, project_id):
     <style>
       body {{ margin: 0; padding: 24px; background: #f1f5f9; color: #172033; font-family: Arial, sans-serif; }}
       main {{ max-width: 420px; margin: 12vh auto; padding: 32px 24px; background: #fff; border-radius: 16px; text-align: center; box-shadow: 0 8px 24px #1720331a; }}
-      a {{ display: inline-block; margin-top: 12px; padding: 13px 20px; border-radius: 8px; background: #1674d1; color: #fff; font-weight: bold; text-decoration: none; }}
+      a {{ display: block; margin-top: 24px; padding: 18px 24px; border: 2px solid #0f5eae; border-radius: 12px; background: #1674d1; color: #fff; font-size: 20px; font-weight: bold; text-decoration: none; box-shadow: 0 4px 12px #1674d14d; }}
+      a:focus-visible {{ outline: 4px solid #f59e0b; outline-offset: 4px; }}
+      a:active {{ background: #0f5eae; transform: translateY(1px); }}
     </style>
   </head>
   <body>
     <main>
       <h1>Đang mở ứng dụng...</h1>
       <p>Nếu ứng dụng không tự mở, hãy bấm nút bên dưới.</p>
-      <a href="{deep_link}">Mở ứng dụng</a>
+      <a id="open-app" href="{deep_link}">Mở ứng dụng</a>
     </main>
-    <script>window.location.href = "{deep_link}";</script>
+    <script>
+      window.addEventListener("load", () => {{
+        document.getElementById("open-app").click();
+      }}, {{ once: true }});
+    </script>
   </body>
 </html>""".encode("utf-8")
     start_response(

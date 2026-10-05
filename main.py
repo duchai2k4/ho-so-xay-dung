@@ -2,6 +2,7 @@
 import asyncio
 import logging
 import re
+from urllib.request import Request, urlopen
 
 import flet as ft
 
@@ -14,6 +15,29 @@ from core.database import (
 from core.utils import show_message
 from ui.auth import build_auth_view
 from ui.app import start_main_app
+
+
+async def wake_render_server():
+    def send_health_request():
+        request = Request(
+            "https://ho-so-xay-dung.onrender.com/healthz",
+            headers={"User-Agent": "HoSoXayDung/1.0"},
+            method="GET",
+        )
+        with urlopen(request, timeout=10) as response:
+            if not 200 <= response.status < 300:
+                raise RuntimeError(
+                    f"Render health endpoint trả về HTTP {response.status}."
+                )
+
+    try:
+        await asyncio.to_thread(send_health_request)
+        logging.info("Đã gửi yêu cầu đánh thức Render server.")
+    except Exception:
+        logging.warning(
+            "Không thể đánh thức Render server; ứng dụng vẫn tiếp tục khởi động.",
+            exc_info=True,
+        )
 
 
 def _startup_error_detail(error):
@@ -37,6 +61,10 @@ def main(page: ft.Page):
     page.theme_mode = ft.ThemeMode.LIGHT
     page.bgcolor = ft.Colors.GREY_100
     page.padding = 0
+    try:
+        page.run_task(wake_render_server)
+    except Exception:
+        logging.exception("Không thể khởi chạy tác vụ đánh thức Render server.")
 
     platform_name = str(page.platform).lower().rsplit(".", 1)[-1]
     if platform_name in {"windows", "macos", "linux"}:
