@@ -92,6 +92,13 @@ def smtp_is_configured() -> bool:
     return bool(os.getenv("BREVO_API_KEY", "").strip())
 
 
+def brevo_credentials_configured() -> bool:
+    return bool(
+        os.getenv("BREVO_API_KEY", "").strip()
+        and os.getenv("BREVO_SENDER_EMAIL", "").strip()
+    )
+
+
 def _send_mail(
     recipient_email: str,
     subject: str,
@@ -175,7 +182,10 @@ def _project_invitation_content(
     inviter_name: str,
     role: str,
 ):
-    deep_link = f"hosoxaydung://project?id={project_id}"
+    deep_link = (
+        "https://ho-so-xay-dung.onrender.com/v1/redirect"
+        f"?project_id={project_id}"
+    )
     safe_project_name = escape(project_name)
     safe_inviter_name = escape(inviter_name)
     safe_role = escape(role)

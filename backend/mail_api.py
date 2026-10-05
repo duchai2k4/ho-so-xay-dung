@@ -6,12 +6,13 @@ import threading
 import time
 from collections import deque
 from email.utils import parseaddr
+from urllib.parse import parse_qs
 from wsgiref.simple_server import make_server
 
 from core.utils import (
     _project_invitation_content,
     _send_mail,
-    smtp_is_configured,
+    brevo_credentials_configured,
 )
 
 MAX_REQUEST_BYTES = 4096
@@ -30,6 +31,40 @@ def _json_response(start_response, status, payload):
         status,
         [
             ("Content-Type", "application/json; charset=utf-8"),
+            ("Content-Length", str(len(body))),
+            ("Cache-Control", "no-store"),
+        ],
+    )
+    return [body]
+
+
+def _redirect_response(start_response, project_id):
+    deep_link = f"hosoxaydung://project?id={project_id}"
+    body = f"""<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mở dự án</title>
+    <style>
+      body {{ margin: 0; padding: 24px; background: #f1f5f9; color: #172033; font-family: Arial, sans-serif; }}
+      main {{ max-width: 420px; margin: 12vh auto; padding: 32px 24px; background: #fff; border-radius: 16px; text-align: center; box-shadow: 0 8px 24px #1720331a; }}
+      a {{ display: inline-block; margin-top: 12px; padding: 13px 20px; border-radius: 8px; background: #1674d1; color: #fff; font-weight: bold; text-decoration: none; }}
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Đang mở ứng dụng...</h1>
+      <p>Nếu ứng dụng không tự mở, hãy bấm nút bên dưới.</p>
+      <a href="{deep_link}">Mở ứng dụng</a>
+    </main>
+    <script>window.location.href = "{deep_link}";</script>
+  </body>
+</html>""".encode("utf-8")
+    start_response(
+        "200 OK",
+        [
+            ("Content-Type", "text/html; charset=utf-8"),
             ("Content-Length", str(len(body))),
             ("Cache-Control", "no-store"),
         ],
@@ -132,16 +167,35 @@ def application(environ, start_response):
     path = environ.get("PATH_INFO", "")
     if method == "GET" and path == "/healthz":
         return _json_response(start_response, "200 OK", {"status": "ok"})
+    if method == "GET" and path == "/v1/redirect":
+        query = parse_qs(environ.get("QUERY_STRING", ""), keep_blank_values=True)
+        project_ids = query.get("project_id", [])
+        if (
+            len(project_ids) != 1
+            or len(project_ids[0]) > 18
+            or re.fullmatch(r"[1-9]\d*", project_ids[0]) is None
+        ):
+            return _json_response(
+                start_response,
+                "400 Bad Request",
+                {"error": "Mã công trình không hợp lệ."},
+            )
+        return _redirect_response(start_response, int(project_ids[0]))
     if method != "POST" or path not in (
         "/v1/email/otp",
         "/v1/email/invitation",
     ):
         return _json_response(start_response, "404 Not Found", {"error": "Không tìm thấy."})
-    if not smtp_is_configured():
+    if not brevo_credentials_configured():
         return _json_response(
             start_response,
             "503 Service Unavailable",
-            {"error": "Dịch vụ gửi email chưa được cấu hình BREVO_API_KEY."},
+            {
+                "error": (
+                    "Dịch vụ gửi email chưa được cấu hình BREVO_API_KEY "
+                    "và BREVO_SENDER_EMAIL."
+                )
+            },
         )
 
     try:
@@ -175,7 +229,7 @@ def application(environ, start_response):
 
 
 def main():
-    if not smtp_is_configured():
+    if not brevo_credentials_configured():
         raise RuntimeError(
             "Hãy cấu hình BREVO_API_KEY và BREVO_SENDER_EMAIL trên máy chủ mail."
         )
